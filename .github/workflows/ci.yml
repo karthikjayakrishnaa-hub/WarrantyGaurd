@@ -1,4 +1,4 @@
-﻿# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # .github/workflows/ci.yml — WarrantyGuard AI
 #
 # Continuous Integration — runs on every push and PR.
@@ -56,8 +56,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Injected from GitHub repo secrets — set these in Settings > Secrets
-      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.TEST_DATABASE_URL }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
