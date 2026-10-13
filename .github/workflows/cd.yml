@@ -81,16 +81,28 @@ jobs:
     name: Deploy to Server
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: ${{ secrets.DEPLOY_HOST != '' }}
 
     steps:
+      - name: Check if server deployment is configured
+        id: check
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          if [ -z "$HOST" ]; then
+            echo "DEPLOY_HOST is not configured. Skipping SSH deployment."
+            echo "enabled=false" >> $GITHUB_OUTPUT
+          else
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy via SSH
+        if: steps.check.outputs.enabled == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          port: 22
           script: |
             # Pull latest images
             docker pull ${{ env.BACKEND_IMAGE }}:latest
