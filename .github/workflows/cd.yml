@@ -1,4 +1,4 @@
-﻿# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # .github/workflows/cd.yml — WarrantyGuard AI
 #
 # Continuous Deployment — runs on push to main branch ONLY.
@@ -42,7 +42,7 @@ jobs:
 
       - name: Extract git short SHA
         id: meta
-        run: echo "sha_short=" >> $GITHUB_OUTPUT
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       # ── Build & Push Backend ──────────────────────────────────────────────────
       - name: Build & push backend image

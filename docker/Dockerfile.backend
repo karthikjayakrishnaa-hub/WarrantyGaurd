@@ -1,13 +1,13 @@
-﻿# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # Dockerfile.backend — WarrantyGuard AI — Backend App Image
 #
 # Extends the ML base image (which already has all model weights baked in).
 # Only copies application code — rebuilt on every push, stays fast.
 # ─────────────────────────────────────────────────────────────────────────────
 ARG REGISTRY=ghcr.io
-ARG REPO=your-github-username/warrantyguard-ai
+ARG REPO=karthikjayakrishnaa-hub/warrantyguard-ai
 ARG BASE_TAG=latest
-FROM //ml-base:
+FROM ${REGISTRY}/${REPO}/ml-base:${BASE_TAG}
 
 WORKDIR /app
 
