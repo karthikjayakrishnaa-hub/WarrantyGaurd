@@ -1,0 +1,106 @@
+﻿# ─────────────────────────────────────────────────────────────────────────────
+# .github/workflows/ci.yml — WarrantyGuard AI
+#
+# Continuous Integration — runs on every push and PR.
+# Jobs: lint-backend, lint-frontend, test-backend, build-check-frontend
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+
+  # ── 1. Backend Linting ───────────────────────────────────────────────────────
+  lint-backend:
+    name: Lint Backend (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff
+        run: ruff check app/ --output-format=github
+
+  # ── 2. Frontend Linting ──────────────────────────────────────────────────────
+  lint-frontend:
+    name: Lint Frontend (oxlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        run: cd frontend && npm ci
+
+      - name: Run oxlint
+        run: cd frontend && npm run lint
+
+  # ── 3. Backend Tests ─────────────────────────────────────────────────────────
+  test-backend:
+    name: Test Backend (pytest)
+    runs-on: ubuntu-latest
+    env:
+      # Injected from GitHub repo secrets — set these in Settings > Secrets
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      STORAGE_BUCKET: evidence
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install lightweight test deps (no ML packages)
+        # PaddleOCR/sentence-transformers are skipped in CI because the code
+        # has try/except ImportError guards — tests pass without them.
+        run: |
+          pip install \
+            fastapi "uvicorn[standard]" sqlalchemy alembic \
+            pydantic-settings python-multipart \
+            "python-jose[cryptography]" "passlib[bcrypt]" \
+            psycopg2-binary supabase python-dotenv \
+            google-genai python-dateutil httpx numpy \
+            Pillow imagehash \
+            pytest pytest-asyncio
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  # ── 4. Frontend Build Check ──────────────────────────────────────────────────
+  build-frontend:
+    name: Build Frontend (vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        run: cd frontend && npm ci
+
+      - name: Build
+        run: cd frontend && npm run build

@@ -1,0 +1,9 @@
+ASUS provides a limited hardware warranty for its laptops, which covers defects in materials and workmanship under normal use conditions.
+The warranty covers technical hardware issues. It does not cover software issues, normal wear and tear, or damage caused by accidents, misuse, improper maintenance.
+The warranty generally does not cover damages resulting from external causes such as power surges, accidents, or neglect.
+Products with tampered serial numbers or broken warranty seals are not covered.
+Repairs performed by non-authorized personnel will void the warranty.
+ASUS may choose to repair or replace the product or its components at their discretion. Repaired parts are covered for the remainder of the original warranty period.
+You are responsible for backing up your data and removing any passwords before sending the device for service.
+Internal laptop batteries often have specific coverage terms and are considered consumables.
+Services must be performed by an ASUS-authorized repair center.

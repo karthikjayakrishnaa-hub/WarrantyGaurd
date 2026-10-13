@@ -1,0 +1,37 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+env/
+.venv/
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local DB
+*.db
+*.sqlite3
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.agents/
+
+# Git / IDE
+.git/
+.vscode/
+.idea/
+
+# Scratch / dev
+scratch/
+generate_phase*.py
+verify_phase*.py
+run_all_verifications.py
+seed.py
+create_users.py
+test_*.py
+tests/

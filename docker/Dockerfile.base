@@ -1,0 +1,46 @@
+﻿# ─────────────────────────────────────────────────────────────────────────────
+# Dockerfile.base — WarrantyGuard AI — ML Base Image
+#
+# PURPOSE: Bake all heavy ML model weights into a single reusable layer.
+# Rebuilt ONLY when ML dependencies change (paddleocr, sentence-transformers,
+# spacy). The backend app image uses this as its FROM base, so CI rebuilds
+# stay fast (no re-downloading 1.5 GB of weights on every push).
+# ─────────────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+# System libraries required by PaddleOCR / OpenCV / psycopg2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 libsm6 libxrender1 libxext6 \
+    libgl1-mesa-glx libgomp1 \
+    gcc g++ libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ── Install heavy ML packages first so they form a stable cached layer ────────
+RUN pip install --no-cache-dir \
+    paddlepaddle==2.6.2 \
+    paddleocr \
+    sentence-transformers \
+    faiss-cpu \
+    spacy \
+    Pillow \
+    imagehash
+
+# ── Pre-download PaddleOCR English model weights at build time ────────────────
+# Prevents 2-5 min cold-start downloads on container startup.
+RUN python -c "\
+import os; \
+os.environ['FLAGS_use_mkldnn']='0'; \
+os.environ['FLAGS_enable_pir_api']='0'; \
+from paddleocr import PaddleOCR; \
+PaddleOCR(use_angle_cls=False, lang='en', enable_mkldnn=False)" \
+    || echo '[WARN] PaddleOCR model pre-download failed — will download at runtime'
+
+# ── Pre-download sentence-transformers model ──────────────────────────────────
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" \
+    || echo '[WARN] SentenceTransformer pre-download failed — will download at runtime'
+
+# ── Download spaCy English model ──────────────────────────────────────────────
+RUN python -m spacy download en_core_web_sm \
+    || echo '[WARN] spaCy model download failed'

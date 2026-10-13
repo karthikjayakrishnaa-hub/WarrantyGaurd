@@ -1,0 +1,41 @@
+﻿# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.prod.yml — WarrantyGuard AI — Production
+#
+# Used on the deployment server. Pulls pre-built images from the registry
+# instead of building locally. Copy this file to your server at /opt/warrantyguard/
+# ─────────────────────────────────────────────────────────────────────────────
+version: "3.9"
+
+services:
+
+  backend:
+    image: ghcr.io/YOUR_GITHUB_USERNAME/warrantyguard-backend:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env          # secrets file on the server — NEVER commit this
+    environment:
+      - CORS_ORIGINS=["https://your-domain.com"]
+    volumes:
+      - warranty_storage:/app/app/storage
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    image: ghcr.io/YOUR_GITHUB_USERNAME/warrantyguard-frontend:latest
+    ports:
+      - "80:80"
+      - "443:443"     # Enable if you add SSL termination (certbot/traefik)
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  warranty_storage:
+    driver: local

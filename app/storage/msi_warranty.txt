@@ -1,0 +1,5 @@
+MSI provides a limited hardware warranty covering manufacturing defects under normal use.
+The warranty does not cover damage from liquid spills, drops, or other accidental damage.
+Tampering with warranty stickers or serial numbers will void the warranty.
+Batteries are considered consumables and generally carry a 1-year warranty regardless of the laptop's extended warranty.
+Service must be obtained through MSI authorized service centers.

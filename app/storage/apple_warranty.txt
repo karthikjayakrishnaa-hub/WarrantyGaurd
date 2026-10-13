@@ -1,0 +1,9 @@
+Apple’s Limited Warranty for MacBooks provides coverage against defects in materials and workmanship.
+The warranty covers failures due to defects in materials and workmanship when the product is used in accordance with Apple’s published guidelines.
+The warranty covers battery issues if the battery degrades below a certain percentage (often 80%) of its original capacity within the warranty period.
+Apple-Branded Accessories contained in the original packaging are typically covered under the same terms as the Mac itself.
+Apple’s Limited Warranty does not apply to accidental damage, including cracked screens, liquid spills, dents, or damage caused by drops.
+Cosmetic damage (scratches, scuffs) and expected battery degradation over time are not considered defects.
+Issues caused by unauthorized repairs, third-party software, or the use of non-Apple components or accessories are excluded.
+Products not branded as Apple or Beats are not covered, even if sold alongside a MacBook.
+You can obtain service through Apple-authorized service providers, the Genius Bar, or by mail-in service.

@@ -1,0 +1,46 @@
+﻿# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — WarrantyGuard AI — Local Development
+#
+# Runs backend + frontend together locally using pre-built images.
+# For local dev without Docker, use: uvicorn app.main:app + npm run dev
+# ─────────────────────────────────────────────────────────────────────────────
+version: "3.9"
+
+services:
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    image: warrantyguard-backend:local
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override CORS to allow docker frontend
+      - CORS_ORIGINS=["http://localhost:80","http://localhost:3000","http://localhost:5173"]
+    volumes:
+      # Persist uploaded warranty policy docs and temp OCR files
+      - ./app/storage:/app/app/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── React/Vite Frontend ──────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    image: warrantyguard-frontend:local
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

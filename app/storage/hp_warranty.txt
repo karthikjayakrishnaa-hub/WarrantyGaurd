@@ -1,0 +1,9 @@
+HP Limited Hardware Warranty provides coverage for defects in materials and workmanship under normal use during the specified warranty period.
+The standard warranty covers hardware components and required firmware if they fail due to defects in materials or craftsmanship.
+During the warranty period, HP will, at its discretion, repair or replace the faulty component or product.
+Replacement parts may be new or refurbished to a performance level equivalent to new.
+The warranty does not cover damage resulting from accidents, drops, or liquid spills. This requires a separate Accidental Damage Protection (ADP) plan.
+The warranty applies to hardware and firmware; it does not cover software applications, programs, or non-HP branded products/peripherals.
+Issues arising from misuse, unauthorized repairs, or physical damage caused by the user are generally excluded as Customer-Induced Damage (CID).
+Standard warranties cover battery failure due to defects but do not cover the natural degradation of battery life over time.
+To avoid voiding your warranty, HP recommends having repairs performed by authorized service providers.
