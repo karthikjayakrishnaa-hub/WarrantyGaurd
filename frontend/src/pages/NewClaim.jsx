@@ -81,15 +81,14 @@ const NewClaim = () => {
         });
       }
 
-      // 3. Fire-and-forget the AI pipeline — DO NOT await.
-      // The pipeline is a long-running ML task (OCR + NLP + GenAI).
-      // Awaiting it here freezes the UI for the full duration.
-      // The claim detail page polls /pipeline/status to show live progress.
-      api.post(`/claims/${claimId}/pipeline/run`).catch(err =>
-        console.error('Pipeline trigger failed (non-blocking):', err)
-      );
+      // 3. Trigger the AI pipeline (FastAPI enqueues as a background task and responds in ~50ms)
+      try {
+        await api.post(`/claims/${claimId}/pipeline/run`);
+      } catch (err) {
+        console.error('Pipeline trigger failed (non-blocking):', err);
+      }
 
-      // 4. Redirect immediately — pipeline runs in background
+      // 4. Redirect immediately — ClaimDetail will poll and show live 8-step progress
       navigate(`/claims/${claimId}`);
     } catch (err) {
       console.error("Failed to submit claim:", err);

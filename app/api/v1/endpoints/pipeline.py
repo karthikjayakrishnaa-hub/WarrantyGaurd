@@ -65,6 +65,19 @@ def run_pipeline(
     return {"message": "Pipeline started", "claim_id": claim.id, "status": "processing"}
 
 
+PIPELINE_STEP_NAMES = {
+    0: "Starting Pipeline",
+    1: "Fetching Evidence",
+    2: "OCR Invoice Analysis",
+    3: "Product Label OCR",
+    4: "NLP Complaint Analysis",
+    5: "Warranty Rule Engine",
+    6: "Duplicate Evidence Check",
+    7: "Policy RAG Retrieval",
+    8: "AI Vision & Triage Decision",
+}
+
+
 @router.get("/{id}/pipeline/status")
 def get_pipeline_status(
     id: int,
@@ -73,10 +86,11 @@ def get_pipeline_status(
 ):
     status = db.query(PipelineStatus).filter(PipelineStatus.claim_id == id).first()
     if not status:
-        return {"status": "pending", "current_step": 0}
+        return {"status": "pending", "current_step": 0, "total_steps": 8, "step_name": "Pending"}
     return {
         "status": status.status,
         "current_step": status.current_step,
         "total_steps": status.total_steps,
+        "step_name": PIPELINE_STEP_NAMES.get(status.current_step, f"Step {status.current_step}/8"),
         "error_message": status.error_message,
     }

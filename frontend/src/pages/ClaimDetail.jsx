@@ -12,40 +12,80 @@ const ClaimDetail = () => {
   const [viewingImageLoading, setViewingImageLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [timelineOrder, setTimelineOrder] = useState('desc'); // 'desc' = Newest first, 'asc' = Chronological
+  const [pipelineProgress, setPipelineProgress] = useState(null);
 
-  // Use a ref for the interval so cleanup always cancels the correct timer
-  // regardless of re-renders. The effect only depends on [id] — NOT on
-  // claim?.status, which previously caused a new interval to be spawned
-  // every time the status changed (leading to runaway polling loops).
+  const PIPELINE_STEPS = [
+    { step: 1, name: 'Evidence Fetching' },
+    { step: 2, name: 'Invoice OCR' },
+    { step: 3, name: 'Label OCR' },
+    { step: 4, name: 'NLP Complaint' },
+    { step: 5, name: 'Rule Engine' },
+    { step: 6, name: 'Duplicate Check' },
+    { step: 7, name: 'Policy RAG' },
+    { step: 8, name: 'AI Decision' },
+  ];
+
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    const fetchClaim = async () => {
-      try {
-        const response = await api.get(`/claims/${id}`);
-        const data = response.data;
-        setClaim(data);
+    let isMounted = true;
 
-        // Stop polling once the claim has left the processing state
-        if (data.status !== 'processing' && intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
+    const pollStatus = async () => {
+      try {
+        const claimRes = await api.get(`/claims/${id}`);
+        if (!isMounted) return;
+        const currentClaim = claimRes.data;
+        setClaim(currentClaim);
+
+        // If claim is still processing or newly submitted, check pipeline progress
+        if (currentClaim.status === 'processing' || currentClaim.status === 'submitted') {
+          try {
+            const pipeRes = await api.get(`/claims/${id}/pipeline/status`);
+            if (!isMounted) return;
+            setPipelineProgress(pipeRes.data);
+
+            if (pipeRes.data.status === 'completed') {
+              // Re-fetch full claim data to get triage_result
+              const freshClaim = await api.get(`/claims/${id}`);
+              if (isMounted) {
+                setClaim(freshClaim.data);
+                setPipelineProgress(null);
+              }
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+              }
+              return;
+            } else if (pipeRes.data.status === 'failed') {
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+              }
+              return;
+            }
+          } catch (e) {
+            // Pipeline status endpoint might be temporarily unreachable
+          }
+        } else {
+          // Claim is already in final state (triaged, approved, rejected, closed)
+          setPipelineProgress(null);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
         }
       } catch (error) {
         console.error("Failed to fetch claim", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    // Initial fetch
-    fetchClaim();
-
-    // Poll every 3 s only while status is 'processing'.
-    // The interval is cleared inside fetchClaim once done.
-    intervalRef.current = setInterval(fetchClaim, 3000);
+    pollStatus();
+    intervalRef.current = setInterval(pollStatus, 2000);
 
     return () => {
+      isMounted = false;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -69,22 +109,27 @@ const ClaimDetail = () => {
   const handleRedoTriage = async () => {
     try {
       setLoading(true);
-      // force=true tells the backend this is an explicit agent action —
-      // allows re-running even if the claim is already triaged/approved/rejected.
+      setPipelineProgress({ status: 'running', current_step: 0, total_steps: 8, step_name: 'Starting Pipeline...' });
       await api.post(`/claims/${id}/pipeline/run?force=true`);
       const response = await api.get(`/claims/${id}`);
       setClaim(response.data);
 
-      // Restart polling so the page updates as the pipeline progresses
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = setInterval(async () => {
-        const r = await api.get(`/claims/${id}`);
-        setClaim(r.data);
-        if (r.data.status !== 'processing') {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
+        try {
+          const pipeRes = await api.get(`/claims/${id}/pipeline/status`);
+          setPipelineProgress(pipeRes.data);
+          if (pipeRes.data.status === 'completed' || pipeRes.data.status === 'failed') {
+            const finalClaim = await api.get(`/claims/${id}`);
+            setClaim(finalClaim.data);
+            if (pipeRes.data.status === 'completed') setPipelineProgress(null);
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+        } catch (e) {
+          console.error("Polling error", e);
         }
-      }, 3000);
+      }, 2000);
     } catch (error) {
       console.error("Failed to redo triage", error);
       alert("Failed to redo triage.");
@@ -254,7 +299,72 @@ const ClaimDetail = () => {
                   <ShieldAlert className="text-primary" size={28} /> AI Triage Intelligence
                 </h3>
                 
-                {triage ? (
+                {claim.status === 'processing' || pipelineProgress ? (
+                  <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3.5 h-3.5 rounded-full bg-cyan-500 animate-ping" />
+                        <span className="text-lg font-black text-primary">
+                          AI Triage Pipeline in Progress
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold px-3 py-1 bg-cyan-500/10 text-cyan-700 rounded-full border border-cyan-500/20">
+                        {pipelineProgress?.current_step ? `Step ${pipelineProgress.current_step} of 8` : 'Processing...'}
+                      </span>
+                    </div>
+
+                    {/* Active Step Banner */}
+                    <div className="bg-white/70 p-4 rounded-xl border border-white/80 shadow-sm flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Zap size={20} className="text-cyan-600 animate-bounce" />
+                        <span className="font-bold text-foreground">
+                          {pipelineProgress?.step_name || 'Executing ML models (OCR & Policy Evaluation)...'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-primary font-mono font-bold">
+                        {pipelineProgress?.current_step ? `${Math.round((pipelineProgress.current_step / 8) * 100)}%` : '10%'}
+                      </span>
+                    </div>
+
+                    {/* Animated Progress Bar */}
+                    <div className="w-full bg-slate-200/80 rounded-full h-3 overflow-hidden shadow-inner">
+                      <div
+                        className="bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 h-3 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${Math.max(8, ((pipelineProgress?.current_step || 0) / 8) * 100)}%` }}
+                      />
+                    </div>
+
+                    {/* 8 Step Mini Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                      {PIPELINE_STEPS.map((s) => {
+                        const stepNum = pipelineProgress?.current_step || 0;
+                        const isDone = stepNum > s.step;
+                        const isCurrent = stepNum === s.step;
+                        return (
+                          <div
+                            key={s.step}
+                            className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                              isDone
+                                ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20'
+                                : isCurrent
+                                ? 'bg-cyan-500/20 text-cyan-800 border border-cyan-500/40 shadow-sm animate-pulse'
+                                : 'bg-slate-100/60 text-slate-400 border border-slate-200/40'
+                            }`}
+                          >
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-white shadow-sm shrink-0">
+                              {isDone ? '✓' : s.step}
+                            </span>
+                            <span className="truncate">{s.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground text-center m-0">
+                      Processing document OCR and reasoning models on CPU. The page updates automatically when complete.
+                    </p>
+                  </div>
+                ) : triage ? (
                   <div className="flex flex-col gap-6">
                     <div>
                       <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Determined Classification</span>

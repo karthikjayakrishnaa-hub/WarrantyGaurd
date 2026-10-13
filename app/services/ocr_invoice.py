@@ -5,14 +5,15 @@ import os
 os.environ["FLAGS_use_mkldnn"] = "0"
 os.environ["FLAGS_enable_pir_api"] = "0"
 
-try:
-    from paddleocr import PaddleOCR
-    ocr_engine = PaddleOCR(use_angle_cls=False, lang='en', enable_mkldnn=False)
-except ImportError:
-    ocr_engine = None
-    logging.warning("PaddleOCR not installed.")
+from app.services.ocr_shared import get_ocr_engine
+
+def __getattr__(name):
+    if name == "ocr_engine":
+        return get_ocr_engine()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 def extract_invoice_fields(file_path: str) -> dict:
+    ocr_engine = get_ocr_engine()
     if not ocr_engine:
         return {}
         
