@@ -33,9 +33,11 @@ RUN python -c "\
 import os; \
 os.environ['FLAGS_use_mkldnn']='0'; \
 os.environ['FLAGS_enable_pir_api']='0'; \
+os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK']='True'; \
 from paddleocr import PaddleOCR; \
-PaddleOCR(use_angle_cls=False, lang='en', enable_mkldnn=False)" \
+PaddleOCR(ocr_version='PP-OCRv4', lang='en', enable_mkldnn=False, use_doc_orientation_classify=False, use_doc_unwarping=False)" \
     || echo '[WARN] PaddleOCR model pre-download failed — will download at runtime'
+
 
 # ── Pre-download sentence-transformers model ──────────────────────────────────
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" \

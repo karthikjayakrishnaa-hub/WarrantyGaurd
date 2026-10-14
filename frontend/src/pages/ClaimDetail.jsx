@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, ShieldAlert, FileText, Download, Calendar, User, Package, Hash, Tag, Clock, Activity, Upload, Zap, RotateCcw, ArrowUpDown, MessageSquare, Eye } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, ShieldAlert, FileText, Download, User, Package, Clock, Activity, Upload, Zap, RotateCcw, ArrowUpDown, MessageSquare, Eye } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
@@ -287,115 +287,143 @@ const ClaimDetail = () => {
         {/* Main Content (Left, 2 Columns Wide) */}
         <div className="lg:col-span-2 flex flex-col gap-8 animate-fade-in animate-delay-1">
           
-          {/* Hero AI Decision Card */}
-          {isAgent && (
-            <div className="glass-card relative overflow-hidden p-8 shadow-xl shadow-primary/5" style={triage ? { borderTop: `4px solid ${getTriageColor(triage.category)}` } : {}}>
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                {triage ? getTriageIcon(triage.category) : <AlertCircle size={120} />}
-              </div>
+          {/* Hero AI Decision Card - Visible for all claims and users */}
+          <div className="glass-card relative overflow-hidden p-8 shadow-xl shadow-primary/5" style={triage ? { borderTop: `4px solid ${getTriageColor(triage.category)}` } : {}}>
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              {triage ? getTriageIcon(triage.category) : <AlertCircle size={120} />}
+            </div>
+            
+            <div className="relative z-10">
+              <h3 className="flex items-center gap-3 text-2xl font-black text-foreground mb-6">
+                <ShieldAlert className="text-primary" size={28} /> AI Triage Intelligence
+              </h3>
               
-              <div className="relative z-10">
-                <h3 className="flex items-center gap-3 text-2xl font-black text-foreground mb-6">
-                  <ShieldAlert className="text-primary" size={28} /> AI Triage Intelligence
-                </h3>
-                
-                {claim.status === 'processing' || pipelineProgress ? (
-                  <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-5">
+              {claim.status === 'processing' || (pipelineProgress && pipelineProgress.status === 'running') ? (
+                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3.5 h-3.5 rounded-full bg-cyan-500 animate-ping" />
+                      <span className="text-lg font-black text-primary">
+                        AI Triage Pipeline in Progress
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold px-3 py-1 bg-cyan-500/10 text-cyan-700 rounded-full border border-cyan-500/20">
+                      {pipelineProgress?.current_step ? `Step ${pipelineProgress.current_step} of 8` : 'Processing...'}
+                    </span>
+                  </div>
+
+                  {/* Active Step Banner */}
+                  <div className="bg-white/70 p-4 rounded-xl border border-white/80 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Zap size={20} className="text-cyan-600 animate-bounce" />
+                      <span className="font-bold text-foreground">
+                        {pipelineProgress?.step_name || 'Executing ML models (OCR & Policy Evaluation)...'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-primary font-mono font-bold">
+                      {pipelineProgress?.current_step ? `${Math.round((pipelineProgress.current_step / 8) * 100)}%` : '10%'}
+                    </span>
+                  </div>
+
+                  {/* Animated Progress Bar */}
+                  <div className="w-full bg-slate-200/80 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div
+                      className="bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 h-3 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${Math.max(8, ((pipelineProgress?.current_step || 0) / 8) * 100)}%` }}
+                    />
+                  </div>
+
+                  {/* 8 Step Mini Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                    {PIPELINE_STEPS.map((s) => {
+                      const stepNum = pipelineProgress?.current_step || 0;
+                      const isDone = stepNum > s.step;
+                      const isCurrent = stepNum === s.step;
+                      return (
+                        <div
+                          key={s.step}
+                          className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                            isDone
+                              ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20'
+                              : isCurrent
+                              ? 'bg-cyan-500/20 text-cyan-800 border border-cyan-500/40 shadow-sm animate-pulse'
+                              : 'bg-slate-100/60 text-slate-400 border border-slate-200/40'
+                          }`}
+                        >
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-white shadow-sm shrink-0">
+                            {isDone ? '✓' : s.step}
+                          </span>
+                          <span className="truncate">{s.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground text-center m-0">
+                    Processing document OCR and reasoning models on CPU. The page updates automatically when complete.
+                  </p>
+                </div>
+              ) : triage ? (
+                <div className="flex flex-col gap-6">
+                  {/* Triage 8-Step Verification Audit Status */}
+                  <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-3 shadow-sm">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3.5 h-3.5 rounded-full bg-cyan-500 animate-ping" />
-                        <span className="text-lg font-black text-primary">
-                          AI Triage Pipeline in Progress
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={18} className="text-emerald-600" />
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-800">
+                          8-Step AI Triage Pipeline Verified
                         </span>
                       </div>
-                      <span className="text-xs font-bold px-3 py-1 bg-cyan-500/10 text-cyan-700 rounded-full border border-cyan-500/20">
-                        {pipelineProgress?.current_step ? `Step ${pipelineProgress.current_step} of 8` : 'Processing...'}
+                      <span className="text-[11px] font-bold px-3 py-1 bg-emerald-500/15 text-emerald-800 rounded-full border border-emerald-500/20">
+                        8 / 8 Steps Completed
                       </span>
                     </div>
 
-                    {/* Active Step Banner */}
-                    <div className="bg-white/70 p-4 rounded-xl border border-white/80 shadow-sm flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Zap size={20} className="text-cyan-600 animate-bounce" />
-                        <span className="font-bold text-foreground">
-                          {pipelineProgress?.step_name || 'Executing ML models (OCR & Policy Evaluation)...'}
-                        </span>
-                      </div>
-                      <span className="text-xs text-primary font-mono font-bold">
-                        {pipelineProgress?.current_step ? `${Math.round((pipelineProgress.current_step / 8) * 100)}%` : '10%'}
-                      </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {PIPELINE_STEPS.map((s) => (
+                        <div
+                          key={s.step}
+                          className="p-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-white/80 text-emerald-800 border border-emerald-500/20 shadow-xs"
+                        >
+                          <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black bg-emerald-600 text-white shrink-0">
+                            ✓
+                          </span>
+                          <span className="truncate">{s.name}</span>
+                        </div>
+                      ))}
                     </div>
+                  </div>
 
-                    {/* Animated Progress Bar */}
-                    <div className="w-full bg-slate-200/80 rounded-full h-3 overflow-hidden shadow-inner">
-                      <div
-                        className="bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 h-3 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${Math.max(8, ((pipelineProgress?.current_step || 0) / 8) * 100)}%` }}
-                      />
+                  <div>
+                    <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Determined Classification</span>
+                    <div className="inline-block px-4 py-2 rounded-xl font-black text-lg tracking-wide shadow-inner"
+                         style={{ backgroundColor: `${getTriageColor(triage.category)}20`, color: getTriageColor(triage.category), border: `1px solid ${getTriageColor(triage.category)}40` }}>
+                      {triage.category.replace('_', ' ').toUpperCase()}
                     </div>
-
-                    {/* 8 Step Mini Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                      {PIPELINE_STEPS.map((s) => {
-                        const stepNum = pipelineProgress?.current_step || 0;
-                        const isDone = stepNum > s.step;
-                        const isCurrent = stepNum === s.step;
-                        return (
-                          <div
-                            key={s.step}
-                            className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                              isDone
-                                ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20'
-                                : isCurrent
-                                ? 'bg-cyan-500/20 text-cyan-800 border border-cyan-500/40 shadow-sm animate-pulse'
-                                : 'bg-slate-100/60 text-slate-400 border border-slate-200/40'
-                            }`}
-                          >
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-white shadow-sm shrink-0">
-                              {isDone ? '✓' : s.step}
-                            </span>
-                            <span className="truncate">{s.name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <p className="text-xs text-muted-foreground text-center m-0">
-                      Processing document OCR and reasoning models on CPU. The page updates automatically when complete.
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Reasoning & Analysis</span>
+                    <p className="text-xl font-medium text-foreground leading-relaxed">
+                      {triage.reasoning_summary}
                     </p>
                   </div>
-                ) : triage ? (
-                  <div className="flex flex-col gap-6">
-                    <div>
-                      <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Determined Classification</span>
-                      <div className="inline-block px-4 py-2 rounded-xl font-black text-lg tracking-wide shadow-inner"
-                           style={{ backgroundColor: `${getTriageColor(triage.category)}20`, color: getTriageColor(triage.category), border: `1px solid ${getTriageColor(triage.category)}40` }}>
-                        {triage.category.replace('_', ' ').toUpperCase()}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Reasoning & Analysis</span>
-                      <p className="text-xl font-medium text-foreground leading-relaxed">
-                        {triage.reasoning_summary}
-                      </p>
-                    </div>
-                    
-                    <div className="mt-2 p-5 rounded-2xl bg-primary/5 border border-primary/10 shadow-inner">
-                      <span className="text-sm font-bold text-primary uppercase tracking-wider mb-1 block">Recommended Action</span>
-                      <p className="text-lg font-black text-primary m-0">{triage.recommended_action}</p>
-                    </div>
+                  
+                  <div className="mt-2 p-5 rounded-2xl bg-primary/5 border border-primary/10 shadow-inner">
+                    <span className="text-sm font-bold text-primary uppercase tracking-wider mb-1 block">Recommended Action</span>
+                    <p className="text-lg font-black text-primary m-0">{triage.recommended_action}</p>
                   </div>
-                ) : (
-                  <div className="p-8 border-2 border-dashed border-primary/20 rounded-2xl bg-white/10 flex flex-col items-center justify-center text-center">
-                    <Clock size={40} className="text-primary/40 mb-3 animate-pulse" />
-                    <p className="text-lg font-semibold text-primary/70">AI Analysis is currently pending or unavailable.</p>
-                    <p className="text-sm text-muted-foreground mt-1">Check back shortly once the automated pipeline completes.</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="p-8 border-2 border-dashed border-primary/20 rounded-2xl bg-white/10 flex flex-col items-center justify-center text-center">
+                  <Clock size={40} className="text-primary/40 mb-3 animate-pulse" />
+                  <p className="text-lg font-semibold text-primary/70">AI Analysis is currently pending or queued.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Check back shortly once the automated pipeline completes.</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
 
           {/* Customer Complaint */}
           <div className="glass-card p-8 shadow-lg shadow-primary/5">

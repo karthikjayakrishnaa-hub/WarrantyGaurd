@@ -1,6 +1,11 @@
 import logging
 import os
+import threading
 import numpy as np
+
+# Force offline mode for Hugging Face Hub if weights are cached
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 try:
     import faiss
@@ -9,21 +14,31 @@ except ImportError:
     logging.warning("FAISS not installed.")
 
 _embedder = None
+_embedder_lock = threading.Lock()
 
 def get_embedder():
     global _embedder
     if _embedder is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            _embedder = SentenceTransformer('all-MiniLM-L6-v2')
-        except Exception as e:
-            logging.warning(f"SentenceTransformers not loaded: {e}")
+        with _embedder_lock:
+            if _embedder is None:
+                try:
+                    from sentence_transformers import SentenceTransformer
+                    try:
+                        _embedder = SentenceTransformer('all-MiniLM-L6-v2')
+                    except Exception:
+                        # Fallback with online mode if weights weren't downloaded yet
+                        os.environ.pop("HF_HUB_OFFLINE", None)
+                        os.environ.pop("TRANSFORMERS_OFFLINE", None)
+                        _embedder = SentenceTransformer('all-MiniLM-L6-v2')
+                except Exception as e:
+                    logging.warning(f"SentenceTransformers not loaded: {e}")
     return _embedder
 
 STORAGE_DIR = os.path.join(os.path.dirname(__file__), "..", "storage")
 
 brand_indices = {}
 brand_docs = {}
+
 
 GENERIC_POLICY = """
 Limited Hardware Warranty provides coverage for defects in materials and workmanship under normal use during the specified warranty period.

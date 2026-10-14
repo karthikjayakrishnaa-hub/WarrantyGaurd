@@ -42,14 +42,36 @@ def seed_admin_user():
         db.close()
 
 
+import threading
+
+def _warmup_ml_models():
+    """Background pre-warming of OCR and RAG models to eliminate cold-start lag."""
+    try:
+        from app.services.ocr_shared import get_ocr_engine
+        get_ocr_engine()
+        print("[OK] Pre-warmed PaddleOCR mobile engine")
+    except Exception as e:
+        print(f"[WARN] OCR pre-warm skipped: {e}")
+
+    try:
+        from app.services.policy_rag import get_embedder, init_index_for_brand
+        get_embedder()
+        init_index_for_brand("Generic")
+        print("[OK] Pre-warmed Policy RAG embedder and generic index")
+    except Exception as e:
+        print(f"[WARN] Policy RAG pre-warm skipped: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: ensure storage, seed
     os.makedirs(settings.STORAGE_PATH, exist_ok=True)
     # Base.metadata.create_all(bind=engine) # Handled by Alembic now
     seed_admin_user()
+    # Pre-warm ML models in non-blocking background thread
+    threading.Thread(target=_warmup_ml_models, daemon=True).start()
     yield
     # Shutdown: nothing needed
+
 
 
 app = FastAPI(

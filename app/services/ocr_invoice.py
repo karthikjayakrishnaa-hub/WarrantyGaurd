@@ -5,7 +5,7 @@ import os
 os.environ["FLAGS_use_mkldnn"] = "0"
 os.environ["FLAGS_enable_pir_api"] = "0"
 
-from app.services.ocr_shared import get_ocr_engine
+from app.services.ocr_shared import get_ocr_engine, run_ocr_optimized
 
 def __getattr__(name):
     if name == "ocr_engine":
@@ -13,12 +13,9 @@ def __getattr__(name):
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 def extract_invoice_fields(file_path: str) -> dict:
-    ocr_engine = get_ocr_engine()
-    if not ocr_engine:
-        return {}
-        
     try:
-        result = ocr_engine.ocr(file_path)
+        result = run_ocr_optimized(file_path)
+
         raw_text = []
         if result:
             for item in result:
